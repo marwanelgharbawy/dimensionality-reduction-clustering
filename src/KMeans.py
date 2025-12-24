@@ -13,20 +13,23 @@ class KMeans:
         # attributes to be set during fitting
         self.centroids = None
         self.labels = None
+        self.inertia_history = None
         
     def fit(self, X):
         # initialize centroids
         if self.initialization_method == 'k-means++':
-            self.centroids = self.initialize_kmeans_plus_plus(X)
+            self.centroids = self._initialize_kmeans_plus_plus(X)
         elif self.initialization_method == 'random':
-            self.centroids = self.initialize_random_centroids(X)
+            self.centroids = self._initialize_random_centroids(X)
         else:
             raise ValueError("Invalid initialization method")
+        
+        self.inertia_history = []
         
         # assign, then update
         for iteration in range(self.max_iterations):
             # assign clusters based on current centroids
-            self.labels = self.assign_clusters(X) # indices
+            self.labels = self._assign_clusters(X) # indices
             
             # store old centroids for convergence check
             old_centroids = self.centroids.copy()
@@ -46,6 +49,9 @@ class KMeans:
                     
             self.centroids = new_centroids
             
+            current_inertia = self._calculate_inertia(X)
+            self.inertia_history.append(current_inertia)
+            
             # check for convergence
             centroids_distance = np.linalg.norm(self.centroids - old_centroids)
             if centroids_distance < self.tolerance:
@@ -54,15 +60,17 @@ class KMeans:
         
         print(f"Converged after reaching maximum iterations ({self.max_iterations}).")
         
+    def predict(self, X):
+        return self._assign_clusters(X)
         
-    def initialize_random_centroids(self, X):
+    def _initialize_random_centroids(self, X):
         n_samples = X.shape[0]
         # choose random k unique samples as initial centroids
         random_indices = np.random.choice(n_samples, self.k, replace=False)
         centroids = X[random_indices]
         return centroids
     
-    def initialize_kmeans_plus_plus(self, X):
+    def _initialize_kmeans_plus_plus(self, X):
         n_samples, n_features = X.shape
         centroids = np.zeros((self.k, n_features))
         
@@ -89,15 +97,29 @@ class KMeans:
 
         return centroids
             
-    def assign_clusters(self, X):
+    def _assign_clusters(self, X):
         distances = self._calculate_distances(X, self.centroids)
         
         # return the index of the closest centroid for each sample
         return np.argmin(distances, axis=1) # shape: (n_samples, 1) representing the k clusters they belong to
-        
+    
+    def _calculate_inertia(self, X):
+        inertia = 0
+        # loop over each cluster
+        for k in range(self.k):
+            # get points for current cluster
+            points_in_cluster = X[self.labels == k]
+            
+            # if cluster not empty, calculate distance
+            if len(points_in_cluster) > 0:
+                # get distances from these points to their centroid
+                distances = np.linalg.norm(points_in_cluster - self.centroids[k], axis=1)
+                
+                # sum all distance^2 to inertia
+                inertia += np.sum(distances ** 2)
+                
+        return inertia
+    
     def _calculate_distances(self, X, centroids):
         distances_list = [np.linalg.norm(X - centroid, axis=1) for centroid in centroids]
         return np.array(distances_list).T  # shape: (n_samples, n_centroids)
-    
-    def predict(self, X):
-        return self.assign_clusters(X)
