@@ -7,7 +7,8 @@ class PCA:
         self.mean = None
         self.eigenvalues = None
         self.eigenvectors = None
-        self.components = None
+        self.components = None      # principal components, also the compression matrix
+        self.top_eigenvalues = None # eigenvalues for the selected components
         self.explained_variance_ratio = None
         
     # fit function calculates data's mean, eigenvalues, and eigenvectors
@@ -19,12 +20,16 @@ class PCA:
         X_centered = X - self.mean     # centered data Z
         
         # covariance matrix (Sigma)
+        # size is [n_features x n_features] (in our case, 30 x 30) 
+        # shows how features vary with respect to each other (symmetric matrix)
         covariance_matrix = np.cov(X_centered, rowvar=False) # rowvar=False to treat columns as numbers
         
         # eigenvalues and eigenvectors
         # solve for Sigma * v = lambda * v
         # where v are the eigenvectors and lambda are the eigenvalues
         # eigh returns eigenvalues in ascending order
+        # in our case, we get 30 eigenvalues and 30 eigenvectors (one for each feature)
+        # best eigenvectors to use for PCA are the ones with highest eigenvalues
         eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
          
         # sort eigenvalues and eigenvectors in descending order, since we need the highest ones for PCA
@@ -34,16 +39,16 @@ class PCA:
         self.eigenvalues = eigenvalues[sorted_indices]
         self.eigenvectors = eigenvectors[:, sorted_indices]
         
-        if self.number_of_components <= self.eigenvectors.shape[1]:
-            # use the top 'number_of_components' eigenvectors as principal components
-            self.components = self.eigenvectors[:, :self.number_of_components] # top eigenvectors
-            self.eigenvalues = self.eigenvalues[:self.number_of_components] # top eigenvalues
-        else:
+        if self.number_of_components > self.eigenvectors.shape[1]:
             raise ValueError("Number of components cannot be greater than the number of features")
+            
+        # use the top 'number_of_components' eigenvectors as principal components using slicing
+        self.components = self.eigenvectors[:, :self.number_of_components]
+        self.top_eigenvalues = self.eigenvalues[:self.number_of_components]
         
         # total variance = sum of all eigenvalues used for principal components
         total_variance = np.sum(self.eigenvalues)
         
         # explained variance ratio = eigenvalue / total variance (array)
         # this number indicates how much variance is shown by the selected components
-        self.explained_variance_ratio = self.eigenvalues / total_variance 
+        self.explained_variance_ratio = self.top_eigenvalues / total_variance 
