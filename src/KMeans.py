@@ -23,9 +23,37 @@ class KMeans:
         else:
             raise ValueError("Invalid initialization method")
         
+        # assign, then update
         for iteration in range(self.max_iterations):
-            # assign, then update
-            pass
+            # assign clusters based on current centroids
+            self.labels = self.assign_clusters(X) # indices
+            
+            # store old centroids for convergence check
+            old_centroids = self.centroids.copy()
+            
+            # update centroids based on current assignments
+            new_centroids = np.zeros_like(self.centroids)
+            
+            for k in range(self.k):
+                # get all points assigned to cluster k
+                cluster_points = X[self.labels == k]
+                
+                if len(cluster_points) > 0:
+                    new_centroids[k] = np.mean(cluster_points, axis=0)
+                else:
+                    # handle empty cluster if no points are assigned
+                    new_centroids[k] = self.centroids[k]
+                    
+            self.centroids = new_centroids
+            
+            # check for convergence
+            centroids_distance = np.linalg.norm(self.centroids - old_centroids)
+            if centroids_distance < self.tolerance:
+                print(f"Converged at iteration number {iteration + 1}.")
+                return # no more iterations
+        
+        print(f"Converged after reaching maximum iterations ({self.max_iterations}).")
+        
         
     def initialize_random_centroids(self, X):
         n_samples = X.shape[0]
@@ -46,7 +74,7 @@ class KMeans:
             # compute d^2 from the nearest centroid
             distances = self._calculate_distances(X, centroids[:i]) # shape: (n_samples, i)
     
-            # for each sample, get the distance to the nearest centroid
+            # get the distance to the nearest centroid for each sample
             min_distances = np.min(distances, axis=1) # shape: (n_samples, 1)
             
             distances_squared = min_distances ** 2
@@ -58,10 +86,18 @@ class KMeans:
             next_centroid_index = np.random.choice(n_samples, p=probabilities)
             
             centroids[i] = X[next_centroid_index] # next centroid
+
+        return centroids
             
     def assign_clusters(self, X):
-        pass
+        distances = self._calculate_distances(X, self.centroids)
+        
+        # return the index of the closest centroid for each sample
+        return np.argmin(distances, axis=1) # shape: (n_samples, 1) representing the k clusters they belong to
         
     def _calculate_distances(self, X, centroids):
         distances_list = [np.linalg.norm(X - centroid, axis=1) for centroid in centroids]
         return np.array(distances_list).T  # shape: (n_samples, n_centroids)
+    
+    def predict(self, X):
+        return self.assign_clusters(X)
