@@ -52,3 +52,19 @@ class PCA:
         # explained variance ratio = eigenvalue / total variance (array)
         # this number indicates how much variance is shown by the selected components
         self.explained_variance_ratio = self.top_eigenvalues / total_variance 
+    
+    # apply the dimensionality reduction on data X
+    # X_new = Z . W
+    # where Z is centered data and W is the compression matrix (principal components)
+    # called right after fit
+    def transform(self, X):
+        Z = X - self.mean
+        return np.dot(Z, self.components) # reduced data
+    
+    # reconstruct data back to original space
+    # X_reconstructed = X_reduced . W^T + mean
+    def inverse_transform(self, X_reduced):
+        return np.dot(X_reduced, self.components.T) + self.mean
+    
+    def get_reconstruction_error(self, X):
+        pass
