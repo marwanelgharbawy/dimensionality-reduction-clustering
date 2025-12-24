@@ -1,7 +1,7 @@
 import numpy as np
 
 class KMeans:
-    def __init__(self, k=3, tolerance=1e-3, max_iterations=1000, initialization_method='random'):
+    def __init__(self, k=3, tolerance=1e-3, max_iterations=1000, initialization_method='k-means++'):
         # number of clusters
         self.k = k
         self.initialization_method = initialization_method
@@ -15,12 +15,17 @@ class KMeans:
         self.labels = None
         
     def fit(self, X):
-        if self.initialization_method == 'random':
-            self.centroids = self.initialize_random_centroids(X)
-        elif self.initialization_method == 'k-means++':
+        # initialize centroids
+        if self.initialization_method == 'k-means++':
             self.centroids = self.initialize_kmeans_plus_plus(X)
+        elif self.initialization_method == 'random':
+            self.centroids = self.initialize_random_centroids(X)
         else:
             raise ValueError("Invalid initialization method")
+        
+        for iteration in range(self.max_iterations):
+            # assign, then update
+            pass
         
     def initialize_random_centroids(self, X):
         n_samples = X.shape[0]
@@ -39,8 +44,12 @@ class KMeans:
         
         for i in range(1, self.k):
             # compute d^2 from the nearest centroid
-            distances = np.min([np.linalg.norm(X - centroid, axis=1) for centroid in centroids[:i]], axis=0)
-            distances_squared = distances ** 2
+            distances = self._calculate_distances(X, centroids[:i]) # shape: (n_samples, i)
+    
+            # for each sample, get the distance to the nearest centroid
+            min_distances = np.min(distances, axis=1) # shape: (n_samples, 1)
+            
+            distances_squared = min_distances ** 2
             
             # get weighted probabilities
             probabilities = distances_squared / np.sum(distances_squared)
@@ -49,5 +58,10 @@ class KMeans:
             next_centroid_index = np.random.choice(n_samples, p=probabilities)
             
             centroids[i] = X[next_centroid_index] # next centroid
+            
+    def assign_clusters(self, X):
+        pass
         
-        return centroids
+    def _calculate_distances(self, X, centroids):
+        distances_list = [np.linalg.norm(X - centroid, axis=1) for centroid in centroids]
+        return np.array(distances_list).T  # shape: (n_samples, n_centroids)
