@@ -2,9 +2,9 @@ import numpy as np
 
 class Autoencoder:
     def __init__ (self, layer_sizes, activations, l2_lambda = 0.01):
-        self.layer_sizes = layer_sizes
-        self.activations = activations
-        self.l2_lambda = l2_lambda
+        self.layer_sizes = layer_sizes  #lists each layer size for example [input_size, hidden1_size, hidden2_size, ..., output_size]
+        self.activations = activations  #list of activation functions for each transformation layer
+        self.l2_lambda = l2_lambda  
         self.weights = []
         self.biases = []
         
