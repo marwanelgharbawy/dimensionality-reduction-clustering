@@ -66,5 +66,10 @@ class PCA:
     def inverse_transform(self, X_reduced):
         return np.dot(X_reduced, self.components.T) + self.mean
     
+    # calculate the reconstruction error (MSE) between original and reconstructed data
     def get_reconstruction_error(self, X):
-        pass
+        # transform and inverse transform the data with PCA
+        X_transformed = self.transform(X)
+        X_reconstructed = self.inverse_transform(X_transformed)
+        
+        return np.mean((X - X_reconstructed) ** 2)
