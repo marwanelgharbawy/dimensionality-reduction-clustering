@@ -56,3 +56,47 @@ def davies_bouldin_score(X, labels):
         
     # Average over all clusters
     return db_score / n_clusters 
+
+
+
+
+def calinski_harabasz_score_scratch(X, labels):
+    
+    
+    # X: np.array of shape (n_samples, n_features)
+    # labels: np.array of shape (n_samples,) containing cluster assignments
+    
+    n_samples, n_features = X.shape
+    unique_labels = np.unique(labels)
+    k = len(unique_labels)
+
+    # If only one cluster or clusters equal to number of samples, index is undefined
+    if k <= 1 or k >= n_samples:
+        return 0.0
+
+    # Calculate the global centroid (mean of all data points)
+    global_centroid = np.mean(X, axis=0)
+
+    extra_cluster_dispersion = 0.0
+    intra_cluster_dispersion = 0.0
+
+    for label in unique_labels:
+        # Get data points belonging to the current cluster
+        cluster_points = X[labels == label]
+        cluster_centroid = np.mean(cluster_points, axis=0)
+        n_q = len(cluster_points)
+
+        #  Between-cluster dispersion (SSB)
+        # Weight the distance between cluster centroid and global centroid by cluster size
+        dist_to_global = np.sum((cluster_centroid - global_centroid) ** 2)
+        extra_cluster_dispersion += n_q * dist_to_global
+
+        # Within-cluster dispersion (SSW)
+        # Sum of squared distances from points to their own cluster centroid
+        intra_cluster_dispersion += np.sum((cluster_points - cluster_centroid) ** 2)
+
+    # Apply the CH Formula: (SSB / (k - 1)) / (SSW / (n_samples - k))
+    score = (extra_cluster_dispersion / (k - 1)) / (intra_cluster_dispersion / (n_samples - k))
+    
+    return score
+
