@@ -226,3 +226,21 @@ def calculate_gap_statistic(X, k_values, kmeans_class, n_refs=5):
         print(f"  k={k}: Gap={gap:.4f}")
         
     return gaps, std_diffs
+
+def wcss_score(X, labels):
+    wcss = 0
+    unique_labels = np.unique(labels)
+    
+    for k in unique_labels:
+        # get points belonging to this cluster
+        cluster_points = X[labels == k]
+        
+        # get centroid
+        centroid = np.mean(cluster_points, axis=0)
+        
+        # calculate squared euclidean distances and sum them up
+        squared_distances = np.sum((cluster_points - centroid) ** 2, axis=1)
+        
+        wcss += np.sum(squared_distances)
+        
+    return wcss
