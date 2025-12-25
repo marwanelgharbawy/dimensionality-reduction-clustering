@@ -175,3 +175,54 @@ def silhouette_score_scratch(X, labels):
     # average score of all points
     return np.mean(silhouette_values)
     
+# gap statistic to determine optimal k
+# run kmeans on fake reference data (within the same bounding box) and compare inertia with real data
+# for each k, the highest gap indicates the best k
+def calculate_gap_statistic(X, k_values, kmeans_class, n_refs=5):
+    gaps = []
+    std_diffs = []
+    
+    # generate noise within the same min/max limits as the features
+    mins = np.min(X, axis=0) # shape : (n_features,1)
+    maxs = np.max(X, axis=0) # shape : (n_features,1)
+    
+    # loop over each k (cluster count) to calculate gap statistic
+    for k in k_values:
+        # run KMeans on data
+        km = kmeans_class(k=k, max_iterations=100, initialization_method='k-means++')
+        km.fit(X)
+        
+        # use the final inertia from history
+        ref_inertia = km.inertia_history[-1]
+            
+        log_inertia_real = np.log(ref_inertia + 1e-10) # 1e-10 to avoid log(0)
+        
+        # run KMeans on reference data multiple times
+        reference_log_inertias = []
+        
+        for i in range(n_refs):
+            # generate random uniform data within min/max bounds
+            X_ref = np.random.uniform(mins, maxs, X.shape)
+            
+            # run KMeans on this reference fake data
+            km_ref = kmeans_class(k=k, max_iterations=100, initialization_method='k-means++')
+            km_ref.fit(X_ref)
+            
+            inertia_ref = km_ref.inertia_history[-1]
+                
+            reference_log_inertias.append(np.log(inertia_ref + 1e-10))
+            
+        # calculate gap
+        # formula: gap = E[log(W_ref)] - log(W_real)
+        mean_log_ref = np.mean(reference_log_inertias)
+        gap = mean_log_ref - log_inertia_real
+        gaps.append(gap)
+        
+        # Calculate standard deviation (for the selection rule)
+        sd_k = np.std(reference_log_inertias)
+        s_k = sd_k * np.sqrt(1 + 1/n_refs)
+        std_diffs.append(s_k)
+        
+        print(f"  k={k}: Gap={gap:.4f}")
+        
+    return gaps, std_diffs
