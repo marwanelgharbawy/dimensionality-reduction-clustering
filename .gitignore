@@ -1,1 +1,4 @@
 /data/data.csv
+src/__pycache__/Autoencoder.cpython-312.pyc
+src/__pycache__/GMM.cpython-312.pyc
+src/__pycache__/PCA.cpython-312.pyc
