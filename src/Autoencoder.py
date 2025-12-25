@@ -35,6 +35,19 @@ class Autoencoder:
         else:
             raise ValueError("Unsupported activation function")
         
+    def get_latent_space(self, X):
+        X_T = X.T
+    
+        # We only run through the ENCODER layers
+        # Our architecture is symmetric, so encoder is the first half of weights
+        n_encoder_layers = len(self.weights) // 2
+    
+        for i in range(n_encoder_layers):
+            Z = np.dot(self.weights[i], X_T) + self.biases[i]
+            X_T = self._activation_function(Z, self.activations[i])
+        
+        return X_T.T # Return shape (N, bottleneck_dim)
+        
     def forward(self, X):
         X_T = X.T
         self.a = [X_T]
