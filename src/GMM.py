@@ -143,9 +143,6 @@ class GMM:
             self.covariances = avg_cov
 
         elif self.cov_type == 'diagonal':
-            #avg_X2 = np.dot(resp.T, X * X) / Nk[:, np.newaxis]
-            #avg_means2 = self.means ** 2
-            #avg_X_means = self.means * (np.dot(resp.T, X) / Nk[:, np.newaxis])
 
             self.covariances = np.zeros((self.n_components, n_features))
             for k in range(self.n_components):
