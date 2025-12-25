@@ -242,5 +242,4 @@ def wcss_score(X, labels):
         squared_distances = np.sum((cluster_points - centroid) ** 2, axis=1)
         
         wcss += np.sum(squared_distances)
-        
     return wcss
