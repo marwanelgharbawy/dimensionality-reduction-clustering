@@ -86,8 +86,8 @@ class Autoencoder:
             lr = initial_lr / (1 + decay * epoch)
 
             #shuffle for the mini batch gradiant decent
-            #indices = np.random.permutation(X.shape[0])
-            X_shuffled = X #[indices]
+            indices = np.random.permutation(X.shape[0])
+            X_shuffled = X [indices]
 
             for i in range(0, X.shape[0], batch_size):
                 X_batch = X_shuffled[i:i+batch_size]

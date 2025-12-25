@@ -57,9 +57,6 @@ def davies_bouldin_score(X, labels):
     # Average over all clusters
     return db_score / n_clusters 
 
-
-
-
 def calinski_harabasz_score_scratch(X, labels):
     
     
@@ -100,3 +97,132 @@ def calinski_harabasz_score_scratch(X, labels):
     
     return score
 
+# silhouette score measures how similar an object is to its own cluster and how far away it is from other clusters
+# score (b - a) / max(a, b)
+def silhouette_score_scratch(X, labels):
+    n_samples = X.shape[0]
+    
+    # get the k labels
+    unique_labels = np.unique(labels)
+    
+    # instead of looping through each sample to get the average distances of points with and without
+    
+    # shape: (N, 1, D)
+    A = X[:, np.newaxis, :] 
+    
+    # shape: (1, N, D)
+    B = X[np.newaxis, :, :] 
+    
+    # subtract A - B -> automatically expanded to match dimensions.
+    # result shape: (N, N, D) -> A 3D cube of differences.
+    diff = A - B
+    
+    # this matrix contains pairs of distances between all points
+    distance_matrix = np.linalg.norm(diff, axis=2) # shape: (N, N)
+    
+    silhouette_values = np.zeros(n_samples)
+    
+    for i in range(n_samples):
+        
+        # calculate a[i] (tightness)
+        # the mean distance from point i to all other points within the same cluster
+        
+        own_cluster = labels[i] # cluster label of point i
+        
+        # find indices within the same cluster
+        indices_in_own_cluster = np.where(labels == own_cluster)[0]
+        
+        if len(indices_in_own_cluster) > 1:
+            # get row i from the big distance matrix but only the columns of same cluster
+            distances_within_cluster = distance_matrix[i, indices_in_own_cluster]
+            
+            # Sum them up and divide by count of points within cluster - 1 (-1 is the point itself)
+            a_i = np.sum(distances_within_cluster) / (len(indices_in_own_cluster) - 1)
+        else:
+            a_i = 0.0
+            
+        # calculate b[i] (separation)   
+        # the mean distance from point i to the nearest neighboring cluster
+        
+        b_i = np.inf # initialize to a large value
+        
+        # loop over other clusters (skipping self)
+        for label in unique_labels:
+            # skip own cluster
+            if label == own_cluster:
+                continue
+                
+            # Get indices of points in this "other" cluster
+            indices_other = np.where(labels == label)[0]
+            
+            if len(indices_other) > 0:
+                # Calculate mean distance to ALL points in this foreign cluster
+                avg_dist_other = np.mean(distance_matrix[i, indices_other])
+                
+                # get nearest cluster -> keep the smallest average distance found so far
+                if avg_dist_other < b_i:
+                    b_i = avg_dist_other
+        
+        # Silhouette score for point: s[i] = (b - a) / max(a, b)
+        
+        max_ab = np.maximum(a_i, b_i)
+        
+        if max_ab == 0:
+            silhouette_values[i] = 0
+        else:
+            silhouette_values[i] = (b_i - a_i) / max_ab
+            
+    # average score of all points
+    return np.mean(silhouette_values)
+    
+# gap statistic to determine optimal k
+# run kmeans on fake reference data (within the same bounding box) and compare inertia with real data
+# for each k, the highest gap indicates the best k
+def calculate_gap_statistic(X, k_values, kmeans_class, n_refs=5):
+    gaps = []
+    std_diffs = []
+    
+    # generate noise within the same min/max limits as the features
+    mins = np.min(X, axis=0) # shape : (n_features,1)
+    maxs = np.max(X, axis=0) # shape : (n_features,1)
+    
+    # loop over each k (cluster count) to calculate gap statistic
+    for k in k_values:
+        # run KMeans on data
+        km = kmeans_class(k=k, max_iterations=100, initialization_method='k-means++')
+        km.fit(X)
+        
+        # use the final inertia from history
+        ref_inertia = km.inertia_history[-1]
+            
+        log_inertia_real = np.log(ref_inertia + 1e-10) # 1e-10 to avoid log(0)
+        
+        # run KMeans on reference data multiple times
+        reference_log_inertias = []
+        
+        for i in range(n_refs):
+            # generate random uniform data within min/max bounds
+            X_ref = np.random.uniform(mins, maxs, X.shape)
+            
+            # run KMeans on this reference fake data
+            km_ref = kmeans_class(k=k, max_iterations=100, initialization_method='k-means++')
+            km_ref.fit(X_ref)
+            
+            inertia_ref = km_ref.inertia_history[-1]
+                
+            reference_log_inertias.append(np.log(inertia_ref + 1e-10))
+            
+        # calculate gap
+        # formula: gap = E[log(W_ref)] - log(W_real)
+        mean_log_ref = np.mean(reference_log_inertias)
+        gap = mean_log_ref - log_inertia_real
+        gaps.append(gap)
+        
+        # Calculate standard deviation (for the selection rule)
+        sd_k = np.std(reference_log_inertias)
+        s_k = sd_k * np.sqrt(1 + 1/n_refs)
+        std_diffs.append(s_k)
+        
+        print(f"  k={k}: Gap={gap:.4f}")
+        
+    return gaps, std_diffs
